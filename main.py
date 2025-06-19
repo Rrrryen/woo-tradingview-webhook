@@ -4,9 +4,7 @@ import hmac
 import hashlib
 import time
 import requests
-import base64
 import json
-import os
 
 app = Flask(__name__)
 
@@ -17,10 +15,9 @@ BASE_URL = "https://api-sandbox.woo.org"
 
 # 工具函式：產生簽名
 def generate_signature(api_secret, method, endpoint, body, timestamp):
-    body_str = json.dumps(body) if body else ""
+    body_str = json.dumps(body, separators=(",", ":")) if body else ""
     payload = f"{timestamp}{method}{endpoint}{body_str}"
-    signature = hmac.new(api_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
-    return signature
+    return hmac.new(api_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 # 主路由：接收 TradingView 訊號
 @app.route('/tradingview', methods=['POST'])
@@ -42,7 +39,8 @@ def webhook():
             "symbol": symbol,
             "side": side,
             "order_type": order_type,
-            "size": qty
+            "size": qty,
+            "order_tag": "tradingview"
         }
 
         timestamp = str(int(time.time() * 1000))
@@ -58,10 +56,10 @@ def webhook():
         response = requests.post(url, headers=headers, json=body)
         print("WOO X 回應：", response.status_code, response.text)
 
-        if response.status_code == 200:
-            return jsonify({"message": "訊號已接收，WOO X 下單成功", "status": "success"})
+        if response.ok:
+            return jsonify({"message": "WOO X 下單成功", "status": "success", "data": response.json()})
         else:
-            return jsonify({"message": "WOO X 回傳錯誤", "status": "error", "detail": response.text}), 500
+            return jsonify({"message": "WOO X 回傳錯誤", "status": "error", "detail": response.text}), response.status_code
 
     except Exception as e:
         print("錯誤：", str(e))
