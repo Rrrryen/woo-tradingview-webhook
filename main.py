@@ -31,16 +31,19 @@ def webhook():
         symbol = data.get("symbol", "XRP-USDT").replace("-", "_").upper()
         order_type = data.get("type", "MARKET").upper()
         qty = str(data.get("qty", 1))
+        client_order_id = f"tv_{int(time.time())}"
 
         endpoint = "/v1/order"
         url = BASE_URL + endpoint
 
         body = {
+            "client_order_id": client_order_id,
             "symbol": symbol,
             "side": side,
             "order_type": order_type,
             "size": qty,
-            "order_tag": "tradingview"
+            "order_tag": "tradingview",
+            "reduce_only": False
         }
 
         timestamp = str(int(time.time() * 1000))
@@ -64,6 +67,7 @@ def webhook():
     except Exception as e:
         print("錯誤：", str(e))
         return jsonify({"message": "系統錯誤", "error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=8080)
